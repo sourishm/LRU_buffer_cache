@@ -3,6 +3,7 @@
 #include <list>
 #include <unordered_map>
 #include <memory>
+#include <mutex>
 
 using namespace std;
 
@@ -82,14 +83,17 @@ class cacheHash {
 private:
     unordered_map<int,T> hash;
     LruList<T> lruList;
+    mutex mtx;
 public:
     void add(int index, const T& entry)
     {
+        lock_guard<mutex> lockGuard(mtx);
         lruList.add(entry);
         hash.insert(pair<int,T>(index, entry));
     }
     void remove(int index)
     {
+        lock_guard<mutex> lockGuard(mtx);
         if (hash.count(index)) {
             lruList.remove(hash.at(index));
             hash.erase(index);
@@ -97,6 +101,7 @@ public:
     }
     void access(int index)
     {
+        lock_guard<mutex> lockGuard(mtx);
         if (hash.count(index)) {
             if (!lruList.access(hash.at(index))) {
                 print_cacheMiss(index);
@@ -107,6 +112,7 @@ public:
     }
     void evict(int size)
     {
+        lock_guard<mutex> lockGuard(mtx);
         /* first evict from the list */
         lruList.evict(size);
         /* then delete the evicted buffers from the hash */
@@ -121,6 +127,7 @@ public:
     }
     void print_cache_hash()
     {
+        lock_guard<mutex> lockGuard(mtx);
         lruList.print_lru();
         cout << endl << endl;
     }
